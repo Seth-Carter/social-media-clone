@@ -9,7 +9,7 @@ const FBAuth = require('./util/fbauth')
 
 // Scream routes
 app.get('*/screams/get', getAllScreams)
-app.post('/scream', FBAuth, postOneScream)
+app.post('*/scream', FBAuth, postOneScream)
 app.get('*/scream/:screamId', getScream)
 
 // TODO:
@@ -22,11 +22,11 @@ app.post('*/scream/:screamId/comment', FBAuth, commentOnScream)
 
 
 // User routes
-app.post('/signup', signup)
-app.post('/login', login)
+app.post('*/signup', signup)
+app.post('*/login', login)
 app.post('*/user/image', FBAuth, uploadImage)
-app.post('/user', FBAuth, addUserDetails)
-app.get('/user', FBAuth, getAuthenticatedUser)
+app.post('*/user', FBAuth, addUserDetails)
+app.get('*/user', FBAuth, getAuthenticatedUser)
 
 
 exports.api = functions.region('europe-west1').https.onRequest(app); 
