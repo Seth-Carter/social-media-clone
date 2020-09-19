@@ -5,7 +5,7 @@ const app = require('express')()
 const { db } = require('./util/admin')
 
 const { getAllScreams, postOneScream, getScream, commentOnScream, likeScream, unlikeScream, deleteScream} = require('./handlers/screams')
-const { signup, login, uploadImage, addUserDetails, getAuthenticatedUser } = require('./handlers/users')
+const { signup, login, uploadImage, addUserDetails, getAuthenticatedUser, getUserDetails, markNotificationsRead } = require('./handlers/users')
 const FBAuth = require('./util/fbauth')
 
 
@@ -13,8 +13,6 @@ const FBAuth = require('./util/fbauth')
 app.get('*/screams/get', getAllScreams)
 app.post('*/scream', FBAuth, postOneScream)
 app.get('*/scream/:screamId', getScream)
-
-// TODO:
 app.delete('*/scream/:screamId', FBAuth, deleteScream)
 app.get('*/scream/:screamId/like', FBAuth, likeScream)
 app.get('*/scream/:screamId/unlike', FBAuth, unlikeScream)
@@ -27,15 +25,17 @@ app.post('*/login', login)
 app.post('*/user/image', FBAuth, uploadImage)
 app.post('*/user', FBAuth, addUserDetails)
 app.get('*/user', FBAuth, getAuthenticatedUser)
+app.get('*/user/:handle', getUserDetails)
+app.post('/notifications', FBAuth, markNotificationsRead)
 
 
 exports.api = functions.region('europe-west1').https.onRequest(app)
 
 exports.createNotificationOnLike = functions.region('europe-west1').firestore.document('likes/{id}')
   .onCreate((snapshot) => {
-    db.doc(`/screams/${snapshot.data().screamId}`).get()
+    return db.doc(`/screams/${snapshot.data().screamId}`).get()
       .then(doc => {
-        if(doc.exists){
+        if(doc.exists && doc.data().userHandle !== snapshot.data().userHandle){
           return db.doc(`/notifications/${snapshot.id}`).set({
             createdAt: new Date().toISOString(),
             recipient: doc.data().userHandle,
@@ -46,39 +46,25 @@ exports.createNotificationOnLike = functions.region('europe-west1').firestore.do
           })
         }
       })
-      .then(() => {
-        return
-      })
       .catch(err => {
         console.error(err)
-        return
       })
   })
 
 exports.deleteNotificationOnUnlike = functions.region('europe-west1').firestore.document('likes/{id}')
   .onDelete(snapshot => {
-    db.doc(`/notifications/${snapshot.id}`)
+    return db.doc(`/notifications/${snapshot.id}`)
       .delete()
-      .then(() => {
-        return
-      })
       .catch(err => {
         console.error(err)
       })
   })
 
-
-
-
-
-
-
-
 exports.createNotificationOnComment = functions.region('europe-west1').firestore.document('comments/{id}')
   .onCreate(snapshot => {
-    db.doc(`/screams/${snapshot.data().screamId}`).get()
+    return db.doc(`/screams/${snapshot.data().screamId}`).get()
     .then(doc => {
-      if(doc.exists){
+      if(doc.exists && doc.data().userHandle !== snapshot.data().userHandle){
         return db.doc(`/notifications/${snapshot.id}`).set({
           createdAt: new Date().toISOString(),
           recipient: doc.data().userHandle,
@@ -89,11 +75,7 @@ exports.createNotificationOnComment = functions.region('europe-west1').firestore
         })
       }
     })
-    .then(() => {
-      return
-    })
     .catch(err => {
       console.error(err)
-      return
     })
   })
